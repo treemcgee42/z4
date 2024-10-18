@@ -1,0 +1,8 @@
+module SokolC {
+    header "sokol/sokol_app.h"
+    header "sokol/sokol_gfx.h"
+    header "sokol/sokol_log.h"
+    header "sokol/sokol_glue.h"
+
+    export *
+}
