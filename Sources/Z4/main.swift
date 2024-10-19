@@ -2,14 +2,14 @@ import Metal
 
 import Imgui
 import Glfw
-import SokolC
+import Sokol
 
 @MainActor
 func main() {
     print("hello, world!")
 
     let mtlDevice = MTLCreateSystemDefaultDevice()!
-    let windowingSystem = WindowingSystem(title: "Hello Triangle", width: 480, height: 480, mtlDevice: mtlDevice)
+    let windowingSystem = WindowingSystem(title: "Hello Triangle", width: 640, height: 480, mtlDevice: mtlDevice)
 
     var sokolDesc = sg_desc()
     sokolDesc.environment = windowingSystem.environment()

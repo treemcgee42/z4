@@ -1,4 +1,4 @@
-module SokolC {
+module Sokol {
     header "shim.h"
     export *
 }

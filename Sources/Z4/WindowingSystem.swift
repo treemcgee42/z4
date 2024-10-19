@@ -2,7 +2,7 @@ import Metal
 
 import Glfw
 import Imgui
-import SokolC
+import Sokol
 
 @MainActor
 class WindowingSystem {

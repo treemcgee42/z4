@@ -1,3 +1,5 @@
+# This file was primarily written by ChatGPT 4o.
+
 INCLUDE_DIR = include
 IMGUI_DIR = imgui
 

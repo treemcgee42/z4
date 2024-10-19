@@ -1,16 +1,14 @@
 // swift-tools-version: 6.0
-// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 var sokolTarget = Target.target(
-  name: "SokolC",
+  name: "Sokol",
   sources: ["sokol_impl.mm"],
   cxxSettings: [.define("SOKOL_METAL", .when(platforms: [.macOS])),
                 .define("SOKOL_NO_ENTRY"),
                 .unsafeFlags([ "-std=c++17"])]
 )
-              //.unsafeFlags(["-x", "objective-c"], .when(platforms: [.macOS]))])
 
 var glfwTarget = Target.systemLibrary(
   name: "Glfw",
@@ -40,14 +38,12 @@ var imguiTarget = Target.target(
 let package = Package(
   name: "Z4",
   targets: [
-    // Targets are the basic building blocks of a package, defining a module or a test suite.
-    // Targets can depend on other targets in this package and products from dependencies.
     glfwTarget,
     imguiTarget,
     sokolTarget,
     .executableTarget(
       name: "Z4",
-      dependencies: ["Glfw", "Imgui", "SokolC"],
+      dependencies: ["Glfw", "Imgui", "Sokol"],
       swiftSettings: [
         .interoperabilityMode(.Cxx),
         .unsafeFlags(["-I/usr/local/include"], .when(platforms: [.macOS]))

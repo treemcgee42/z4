@@ -1,0 +1,21 @@
+
+The code will only work on macOS in its current state.
+
+** Building
+
+In order for SPM to build ImGui, it was necessary to create symlinks for the relevant
+header files.  The Makefile in its directory does this for you: ~make symlinks~ makes
+them and ~make clean-symlinks~ removes them.
+
+Then the usual SPM commands should handle the rest, e.g do ~swift run~.
+
+*** Dependencies
+
+The repository holds the following dependencies as submodules:
+- [[https://github.com/floooh/sokol][sokol]] (fork)
+- [[https://github.com/ocornut/imgui][Dear ImGui]] (docking)
+
+The following dependencies must be installed:
+- [[https://www.glfw.org][GLFW]] (e.g. ~brew install glfw~). The code currently assumes GLFW was installed via
+  [[https://brew.sh][Homebrew]]. This assumption is relevant for SPM to find the headers and library to
+  link.
