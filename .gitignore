@@ -7,4 +7,8 @@ DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
 
-*.*~
+*~
+
+Sources/Imgui/include/*
+!Sources/Imgui/include/shim.h
+!Sources/Imgui/include/module.modulemap

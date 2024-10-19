@@ -1,3 +1,6 @@
+[submodule "Sources/Imgui/imgui"]
+	path = Sources/Imgui/imgui
+	url = git@github.com:ocornut/imgui.git
 [submodule "Sources/SokolC/include/sokol"]
 	path = Sources/SokolC/include/sokol
-	url = git@github.com:floooh/sokol.git
+	url = git@github.com:treemcgee42/sokol.git

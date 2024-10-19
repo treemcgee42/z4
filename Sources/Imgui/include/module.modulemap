@@ -1,4 +1,5 @@
-module SokolC {
+module Imgui {
     header "shim.h"
+
     export *
 }

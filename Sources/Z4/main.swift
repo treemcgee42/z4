@@ -1,97 +1,29 @@
 import Metal
-import MetalKit
 
-import SokolC
+import Imgui
 import Glfw
-
-@MainActor
-class GlfwGlue {
-    var mtlDevice: MTLDevice
-    var mtlSwapchain: CAMetalLayer
-
-    var noDepthBuffer: Bool
-    var majorVersion: Int32
-    var minorVersion: Int32
-    var sampleCount: Int32
-    var window: OpaquePointer
-
-    init(title: String, width: Int32, height: Int32, noDepthBuffer: Bool,
-         mtlDevice: MTLDevice,
-         sampleCount: Int32 = 1,
-         versionMajor: Int32 = 4, versionMinor: Int32 = 1) {
-        self.mtlDevice = mtlDevice
-        self.noDepthBuffer = noDepthBuffer
-        self.sampleCount = sampleCount
-        self.majorVersion = versionMajor
-        self.minorVersion = versionMinor
-
-        glfwInit()
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, 0);
-        if (noDepthBuffer) {
-            glfwWindowHint(GLFW_DEPTH_BITS, 0)
-            glfwWindowHint(GLFW_STENCIL_BITS, 0)
-        }
-        glfwWindowHint(GLFW_SAMPLES, sampleCount == 1 ? 0 : sampleCount)
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, versionMajor)
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, versionMinor)
-
-        self.mtlSwapchain = CAMetalLayer()
-        self.mtlSwapchain.device = self.mtlDevice
-        self.mtlSwapchain.isOpaque = true
-        self.window = glfwCreateWindow(width, height, title, nil, nil)
-        let nsWindow = glfwGetCocoaWindow(window) as! NSWindow
-        nsWindow.contentView!.layer = self.mtlSwapchain
-        nsWindow.contentView!.wantsLayer = true
-
-        glfwMakeContextCurrent(self.window)
-        glfwSwapInterval(1)
-    }
-
-    func environment() -> sg_environment {
-        return .init(
-          defaults: .init(
-            color_format: SG_PIXELFORMAT_BGRA8,
-            depth_format: self.noDepthBuffer ? SG_PIXELFORMAT_NONE : SG_PIXELFORMAT_DEPTH_STENCIL,
-            sample_count: self.sampleCount
-          ),
-          metal: .init(device: Unmanaged.passUnretained(self.mtlDevice).toOpaque()),
-          d3d11: .init(),
-          wgpu: .init()
-        )
-    }
-
-    func swapchain() -> sg_swapchain {
-        var width: Int32 = 0
-        var height: Int32 = 0
-        glfwGetFramebufferSize(self.window, &width, &height)
-
-        var swapchain = sg_swapchain()
-        swapchain.width = width
-        swapchain.height = height
-        swapchain.sample_count = self.sampleCount
-        swapchain.color_format = SG_PIXELFORMAT_BGRA8
-        swapchain.depth_format = self.noDepthBuffer ? SG_PIXELFORMAT_NONE : SG_PIXELFORMAT_DEPTH_STENCIL
-        swapchain.metal.current_drawable = UnsafeRawPointer(Unmanaged.passUnretained(self.mtlSwapchain.nextDrawable()!).toOpaque())
-        swapchain.gl = .init(framebuffer: 0)
-        return swapchain
-    }
-}
+import SokolC
 
 @MainActor
 func main() {
     print("hello, world!")
 
     let mtlDevice = MTLCreateSystemDefaultDevice()!
-    let renderer = GlfwGlue(title: "Hello Triangle", width: 640, height: 480, noDepthBuffer: true,
-                            mtlDevice: mtlDevice)
+    let windowingSystem = WindowingSystem(title: "Hello Triangle", width: 480, height: 480, mtlDevice: mtlDevice)
 
     var sokolDesc = sg_desc()
-    sokolDesc.environment = renderer.environment()
+    sokolDesc.environment = windowingSystem.environment()
     sokolDesc.logger.func = slog_func
     sg_setup(&sokolDesc)
 
+    var sokolImguiDesc = simgui_desc_t()
+    sokolImguiDesc.logger.func = slog_func
+    simgui_setup(&sokolImguiDesc)
+
+    ImGui_ImplGlfw_InitForOther(windowingSystem.window, false);
+
+    stm_setup();
+    
     let vertices: [Float] = [
       // positions            // colors
       0.0,  0.5, 0.5,     1.0, 0.0, 0.0, 1.0,
@@ -155,19 +87,35 @@ func main() {
     var bindings = sg_bindings()
     bindings.vertex_buffers.0 = vertexBuffer
 
-    while (glfwWindowShouldClose(renderer.window) == 0) {
+    var lastTime: UInt64 = 0
+    while (glfwWindowShouldClose(windowingSystem.window) == 0) {
         var pass = sg_pass()
-        pass.swapchain = renderer.swapchain()
+        pass.swapchain = windowingSystem.swapchain()
+
+        var sokolImguiFrameDesc = simgui_frame_desc_t()
+        sokolImguiFrameDesc.width = Int32(pass.swapchain.width)
+        sokolImguiFrameDesc.height = Int32(pass.swapchain.height)
+        sokolImguiFrameDesc.delta_time = stm_sec(stm_laptime(&lastTime));
+        sokolImguiFrameDesc.dpi_scale = windowingSystem.dpiScale()
+        simgui_new_frame(&sokolImguiFrameDesc);
+
+        withVaList([], { vaList in 
+                           ImGui.TextV("Hello", vaList); })
+        ImGui.ShowDemoWindow();
+        
         sg_begin_pass(&pass)
         sg_apply_pipeline(pipeline);
         sg_apply_bindings(&bindings);
         sg_draw(0, 3, 1);
+        simgui_render();
         sg_end_pass();
         sg_commit();
-        glfwSwapBuffers(renderer.window);
+        glfwSwapBuffers(windowingSystem.window);
         glfwPollEvents();
     }
 
+    ImGui_ImplGlfw_Shutdown()
+    simgui_shutdown();
     sg_shutdown();
     glfwTerminate();
 }
