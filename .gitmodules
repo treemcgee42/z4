@@ -4,3 +4,6 @@
 [submodule "Sources/SokolC/include/sokol"]
 	path = Sources/Sokol/include/sokol
 	url = git@github.com:treemcgee42/sokol.git
+[submodule "Sources/HandmadeMath/HandmadeMath"]
+	path = Sources/HandmadeMath/HandmadeMath
+	url = git@github.com:HandmadeMath/HandmadeMath.git

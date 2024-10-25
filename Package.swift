@@ -17,6 +17,12 @@ var glfwTarget = Target.systemLibrary(
     .brew(["glfw"])]
 )
 
+var handmadeMathTarget = Target.target(
+  name: "HandmadeMath",
+  sources: ["impl.cpp"],
+  cxxSettings: [.unsafeFlags(["-std=c++17"])]
+)
+
 var imguiTarget = Target.target(
   name: "Imgui",
   sources: ["imgui/imconfig.h",
@@ -39,11 +45,12 @@ let package = Package(
   name: "Z4",
   targets: [
     glfwTarget,
+    handmadeMathTarget,
     imguiTarget,
     sokolTarget,
     .executableTarget(
       name: "Z4",
-      dependencies: ["Glfw", "Imgui", "Sokol"],
+      dependencies: ["Glfw", "HandmadeMath", "Imgui", "Sokol"],
       swiftSettings: [
         .interoperabilityMode(.Cxx),
         .unsafeFlags(["-I/usr/local/include"], .when(platforms: [.macOS]))

@@ -1,14 +1,21 @@
 import Metal
+import simd
 
-import Imgui
 import Glfw
+import HandmadeMath
+import Imgui
 import Sokol
+
+struct vs_params_t {
+    var mvp: HMM_Mat4
+}
 
 @MainActor
 func main() {
     print("hello, world!")
 
     let mtlDevice = MTLCreateSystemDefaultDevice()!
+
     let windowingSystem = WindowingSystem(title: "Hello Triangle", width: 640, height: 480, mtlDevice: mtlDevice)
 
     var sokolDesc = sg_desc()
@@ -23,12 +30,44 @@ func main() {
     ImGui_ImplGlfw_InitForOther(windowingSystem.window, false);
 
     stm_setup();
+
+    let windowSize = windowingSystem.windowSize()
+    let camera = Camera3dPerspective(
+      fov: Measurement(value: 60, unit: UnitAngle.degrees), aspectRatio: Float(windowSize.width)/Float(windowSize.height), near: 0.01, far: 10.0,
+      lookFrom: HMM_Vec3(Elements: (0.0, 1.5, 6.0)), lookAt: HMM_Vec3(Elements: (0.0, 0.0, 0.0)), upDirection: HMM_Vec3(Elements: (0.0, 1.0, 0.0)))
+    let shaderManager = ShaderManager()
     
     let vertices: [Float] = [
       // positions            // colors
-      0.0,  0.5, 0.5,     1.0, 0.0, 0.0, 1.0,
-      0.5, -0.5, 0.5,     0.0, 1.0, 0.0, 1.0,
-      -0.5, -0.5, 0.5,     0.0, 0.0, 1.0, 1.0
+      -1.0, -1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+       1.0, -1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+       1.0,  1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+      -1.0,  1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+
+      -1.0, -1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+       1.0, -1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+       1.0,  1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+      -1.0,  1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+
+      -1.0, -1.0, -1.0,   0.0, 0.0, 1.0, 1.0,
+      -1.0,  1.0, -1.0,   0.0, 0.0, 1.0, 1.0,
+      -1.0,  1.0,  1.0,   0.0, 0.0, 1.0, 1.0,
+      -1.0, -1.0,  1.0,   0.0, 0.0, 1.0, 1.0,
+
+       1.0, -1.0, -1.0,   1.0, 0.5, 0.0, 1.0,
+       1.0,  1.0, -1.0,   1.0, 0.5, 0.0, 1.0,
+       1.0,  1.0,  1.0,   1.0, 0.5, 0.0, 1.0,
+       1.0, -1.0,  1.0,   1.0, 0.5, 0.0, 1.0,
+
+      -1.0, -1.0, -1.0,   0.0, 0.5, 1.0, 1.0,
+      -1.0, -1.0,  1.0,   0.0, 0.5, 1.0, 1.0,
+       1.0, -1.0,  1.0,   0.0, 0.5, 1.0, 1.0,
+       1.0, -1.0, -1.0,   0.0, 0.5, 1.0, 1.0,
+
+      -1.0,  1.0, -1.0,   1.0, 0.0, 0.5, 1.0,
+      -1.0,  1.0,  1.0,   1.0, 0.0, 0.5, 1.0,
+       1.0,  1.0,  1.0,   1.0, 0.0, 0.5, 1.0,
+       1.0,  1.0, -1.0,   1.0, 0.0, 0.5, 1.0
     ]
     let vertexBuffer = {
         vertices.withUnsafeBufferPointer { ubp in
@@ -39,39 +78,39 @@ func main() {
         }
     }()
 
-    let vertexShader = """
-      #include <metal_stdlib>
-      using namespace metal;
+    let indices: [Int16] = [
+      0, 1, 2,  0, 2, 3,
+      6, 5, 4,  7, 6, 4,
+      8, 9, 10,  8, 10, 11,
+      14, 13, 12,  15, 14, 12,
+      16, 17, 18,  16, 18, 19,
+      22, 21, 20,  23, 22, 20
+    ]
+    let indexBuffer = {
+        indices.withUnsafeBufferPointer { ubp in
+            let range = sg_range(ptr: ubp.baseAddress, size: ubp.count * MemoryLayout<Int16>.size)
+            var desc = sg_buffer_desc()
+            desc.type = SG_BUFFERTYPE_INDEXBUFFER
+            desc.data = range
+            return sg_make_buffer(&desc)
+        }
+    }()
 
-      struct vs_in {
-      float4 position [[attribute(0)]];
-      float4 color [[attribute(1)]];
-      };
-      struct vs_out {
-      float4 position [[position]];
-      float4 color;
-      };
-
-      vertex vs_out _main(vs_in inp [[stage_in]]) {
-      vs_out outp;
-      outp.position = inp.position;
-      outp.color = inp.color;
-      return outp;
-      }
-      """
+    let vertexShaderSource = shaderManager.getSource(shaderName: "simple-vs")
     let fragmentShader = """
       #include <metal_stdlib>
       using namespace metal;
 
       fragment float4 _main(float4 color [[stage_in]]) {
-      return color;
+          return color;
       };
       """
     let shader: sg_shader = {
-        vertexShader.withCString { vs in
+        vertexShaderSource.withCString{ vs in 
             fragmentShader.withCString { fs in
                 var shaderDesc = sg_shader_desc()
                 shaderDesc.vs.source = vs
+                shaderDesc.vs.uniform_blocks.0.size = MemoryLayout<vs_params_t>.size
                 shaderDesc.fs.source = fs
                 return sg_make_shader(&shaderDesc)
             }
@@ -82,10 +121,15 @@ func main() {
     pipelineDesc.shader = shader
     pipelineDesc.layout.attrs.0.format = SG_VERTEXFORMAT_FLOAT3
     pipelineDesc.layout.attrs.1.format = SG_VERTEXFORMAT_FLOAT4
+    pipelineDesc.index_type = SG_INDEXTYPE_UINT16
+    pipelineDesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL
+    pipelineDesc.depth.write_enabled = true
+    pipelineDesc.cull_mode = SG_CULLMODE_BACK
     let pipeline = sg_make_pipeline(&pipelineDesc)
 
     var bindings = sg_bindings()
     bindings.vertex_buffers.0 = vertexBuffer
+    bindings.index_buffer = indexBuffer
 
     var lastTime: UInt64 = 0
     while (glfwWindowShouldClose(windowingSystem.window) == 0) {
@@ -99,14 +143,21 @@ func main() {
         sokolImguiFrameDesc.dpi_scale = windowingSystem.dpiScale()
         simgui_new_frame(&sokolImguiFrameDesc);
 
-        withVaList([], { vaList in 
+        withVaList([], { vaList in
                            ImGui.TextV("Hello", vaList); })
+        camera.imguiDebugWindow()
+
         ImGui.ShowDemoWindow();
-        
+
         sg_begin_pass(&pass)
         sg_apply_pipeline(pipeline);
         sg_apply_bindings(&bindings);
-        sg_draw(0, 3, 1);
+        var vs_params = vs_params_t(mvp: camera.viewProjectionMatrix)
+        withUnsafeBytes(of: &vs_params) { buffer in
+            var range = sg_range(ptr: buffer.baseAddress, size: buffer.count)
+            sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &range)
+        }
+        sg_draw(0, 36, 1);
         simgui_render();
         sg_end_pass();
         sg_commit();

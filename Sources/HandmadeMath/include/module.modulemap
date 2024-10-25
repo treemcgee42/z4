@@ -1,0 +1,4 @@
+module HandmadeMath {
+    header "shim.h"
+    export *
+}
