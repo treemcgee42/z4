@@ -11,15 +11,18 @@ class OpaqueModelRenderer {
 
     var vertices: [Vertex]
     var indices: [Int16]
+    let textureManager: TextureManager
 
     struct Vertex {
         var position: HMM_Vec4
         var color: HMM_Vec4
+        var uv: HMM_Vec2
     }
 
-    init() {
+    init(textureManager: TextureManager) {
         self.vertices = []
         self.indices = []
+        self.textureManager = textureManager
     }
 
     func createBuffers() {
@@ -45,14 +48,25 @@ class OpaqueModelRenderer {
     func createShaders(shaderManager: ShaderManager) {
         let vertexShaderSource = shaderManager.getSource(shaderName: "opaqueModelVs")
         let fragmentShaderSource = shaderManager.getSource(shaderName: "opaqueModelFs")
+        let fragmentShaderEntry = "fs_main"
         self.shader = {
             vertexShaderSource.withCString{ vs in
                 fragmentShaderSource.withCString { fs in
-                    var shaderDesc = sg_shader_desc()
-                    shaderDesc.vs.source = vs
-                    shaderDesc.vs.uniform_blocks.0.size = MemoryLayout<vs_params_t>.size
-                    shaderDesc.fs.source = fs
-                    return sg_make_shader(&shaderDesc)
+                    fragmentShaderEntry.withCString { fsEntry in
+                        var shaderDesc = sg_shader_desc()
+
+                        shaderDesc.vs.source = vs
+                        shaderDesc.vs.uniform_blocks.0.size = MemoryLayout<vs_params_t>.size
+
+                        shaderDesc.fs.source = fs
+                        shaderDesc.fs.images.0.used = true
+                        shaderDesc.fs.samplers.0.used = true
+                        shaderDesc.fs.image_sampler_pairs.0.used = true
+                        shaderDesc.fs.image_sampler_pairs.0.image_slot = 0
+                        shaderDesc.fs.image_sampler_pairs.0.sampler_slot = 0
+                        shaderDesc.fs.entry = fsEntry
+                        return sg_make_shader(&shaderDesc)
+                    }
                 }
             }
         }()
@@ -62,6 +76,8 @@ class OpaqueModelRenderer {
         self.bindings = sg_bindings()
         self.bindings!.vertex_buffers.0 = self.vertexBuffer!
         self.bindings!.index_buffer = self.indexBuffer!
+        self.bindings!.fs.images.0 = self.textureManager.image!
+        self.bindings!.fs.samplers.0 = self.textureManager.sampler!
     }
 
     func createPipeline() {
@@ -70,6 +86,7 @@ class OpaqueModelRenderer {
         pipelineDesc.layout.buffers.0.stride = Int32(MemoryLayout<Vertex>.stride)
         pipelineDesc.layout.attrs.0.format = SG_VERTEXFORMAT_FLOAT4
         pipelineDesc.layout.attrs.1.format = SG_VERTEXFORMAT_FLOAT4
+        pipelineDesc.layout.attrs.2.format = SG_VERTEXFORMAT_FLOAT2
         pipelineDesc.index_type = SG_INDEXTYPE_UINT16
         pipelineDesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL
         pipelineDesc.depth.write_enabled = true
@@ -77,7 +94,9 @@ class OpaqueModelRenderer {
         self.pipeline = sg_make_pipeline(&pipelineDesc)
     }
 
-    func addBox(corner1: HMM_Vec3, corner2: HMM_Vec3) {
+    func addBox(corner1: HMM_Vec3, corner2: HMM_Vec3,
+                textures: (bottom: String, top: String, left: String, right: String,
+                           front: String, back: String)) {
         let minCorner = HMM_Vec3(Elements: (min(corner1[0], corner2[0]),
                                             min(corner1[1], corner2[1]),
                                             min(corner1[2], corner2[2])))
@@ -88,26 +107,31 @@ class OpaqueModelRenderer {
         let startIndex = Int16(self.vertices.count)
 
         // --- Front face
+        let frontFaceUvs = self.textureManager.getTextureUvs(textureName: textures.front)
         // (0,0,1)
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 0, 1)),
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uMin, frontFaceUvs.vMin))))
         // (1,0,1) +1
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 0, 1)),
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uMax, frontFaceUvs.vMin))))
         // (0,1,1) +2
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 0, 1)),
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uMin, frontFaceUvs.vMax))))
         // (1,1,1) +3
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 0, 1)),
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uMax, frontFaceUvs.vMax))))
         indices.append(startIndex)
         indices.append(startIndex + 2)
         indices.append(startIndex + 3)
@@ -116,26 +140,31 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 1)
 
         // --- Back face
+        let backFaceUvs = self.textureManager.getTextureUvs(textureName: textures.back)
         // (0,0,0) +4
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (backFaceUvs.uMin, backFaceUvs.vMin))))
         // (1,0,0) +5
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (backFaceUvs.uMax, backFaceUvs.vMin))))
         // (0,1,0) +6
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (backFaceUvs.uMin, backFaceUvs.vMax))))
         // (1,1,0) +7
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (backFaceUvs.uMax, backFaceUvs.vMax))))
         indices.append(startIndex + 4)
         indices.append(startIndex + 5)
         indices.append(startIndex + 7)
@@ -144,26 +173,31 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 6)
 
         // --- Left face
+        let leftFaceUvs = self.textureManager.getTextureUvs(textureName: textures.left)
         // (0,0,0) +8
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uMin, leftFaceUvs.vMin))))
         // (0,1,0) +9
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uMax, leftFaceUvs.vMin))))
         // (0,0,1) +10
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uMin, leftFaceUvs.vMax))))
         // (0,1,1) +11
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uMax, leftFaceUvs.vMax))))
         indices.append(startIndex + 10)
         indices.append(startIndex + 8)
         indices.append(startIndex + 9)
@@ -172,26 +206,31 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 11)
 
         // --- Right face
+        let rightFaceUvs = self.textureManager.getTextureUvs(textureName: textures.right)
         // (1,0,0) +12
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 1, 1)),
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uMin, rightFaceUvs.vMin))))
         // (1,1,0) +13
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 1, 1)),
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uMax, rightFaceUvs.vMin))))
         // (1,0,1) +14
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 1, 1)),
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uMin, rightFaceUvs.vMax))))
         // (1,1,1) +15
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (0, 1, 1, 1))))
+            color: HMM_Vec4(Elements: (0, 1, 1, 1)),
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uMax, rightFaceUvs.vMax))))
         indices.append(startIndex + 14)
         indices.append(startIndex + 15)
         indices.append(startIndex + 13)
@@ -200,26 +239,31 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 12)
 
         // --- Bottom face
+        let bottomFaceUvs = self.textureManager.getTextureUvs(textureName: textures.bottom)
         // (0,0,0) +16
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMin, bottomFaceUvs.vMin))))
         // (1,0,0) +17
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMax, bottomFaceUvs.vMin))))
         // (0,0,1) +18
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMin, bottomFaceUvs.vMax))))
         // (1,0,1) +19
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 1, 0, 1))))
+            color: HMM_Vec4(Elements: (1, 1, 0, 1)),
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMax, bottomFaceUvs.vMax))))
         indices.append(startIndex + 18)
         indices.append(startIndex + 19)
         indices.append(startIndex + 17)
@@ -228,26 +272,31 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 16)
 
         // --- Top face
+        let topFaceUvs = self.textureManager.getTextureUvs(textureName: textures.top)
         // (0,1,0) +20
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (topFaceUvs.uMin, topFaceUvs.vMin))))
         // (1,1,0) +21
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], minCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (topFaceUvs.uMax, topFaceUvs.vMin))))
         // (0,1,1) +22
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (topFaceUvs.uMin, topFaceUvs.vMax))))
         // (1,1,1) +23
         self.vertices.append(
-          Vertex.init(
+          Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], maxCorner[2], 1)),
-            color: HMM_Vec4(Elements: (1, 0, 1, 1))))
+            color: HMM_Vec4(Elements: (1, 0, 1, 1)),
+            uv: HMM_Vec2(Elements: (topFaceUvs.uMax, topFaceUvs.vMax))))
         indices.append(startIndex + 22)
         indices.append(startIndex + 20)
         indices.append(startIndex + 21)

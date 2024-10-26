@@ -37,13 +37,18 @@ func main() {
       lookFrom: HMM_Vec3(Elements: (0.0, 1.5, 6.0)), lookAt: HMM_Vec3(Elements: (0.0, 0.0, 0.0)), upDirection: HMM_Vec3(Elements: (0.0, 1.0, 0.0)))
     let shaderManager = ShaderManager()
 
-    let opaqueModelRenderer = OpaqueModelRenderer()
+    let textureManager = TextureManager()
+    textureManager.createTexture()
+
+    let opaqueModelRenderer = OpaqueModelRenderer(textureManager: textureManager)
     opaqueModelRenderer.addBox(
       corner1: HMM_Vec3(Elements: (-1, -1, -1)),
-      corner2: HMM_Vec3(Elements: (1, 1, 1)))
+      corner2: HMM_Vec3(Elements: (1, 1, 1)),
+      textures: (bottom: "foo", top: "foo", left: "foo", right: "foo", front: "foo", back: "foo"))
     opaqueModelRenderer.addBox(
       corner1: HMM_Vec3(Elements: (3, 3, 3)),
-      corner2: HMM_Vec3(Elements: (2, -2, 2)))
+      corner2: HMM_Vec3(Elements: (2, -2, 2)),
+      textures: (bottom: "foo", top: "foo", left: "foo", right: "foo", front: "foo", back: "foo"))
     opaqueModelRenderer.createBuffers()
     opaqueModelRenderer.createShaders(shaderManager: shaderManager)
     opaqueModelRenderer.createBindings()
