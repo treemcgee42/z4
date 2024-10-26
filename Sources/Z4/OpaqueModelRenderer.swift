@@ -28,7 +28,7 @@ class OpaqueModelRenderer {
     func createBuffers() {
         self.vertexBuffer = {
             self.vertices.withUnsafeBufferPointer { ubp in
-                let range = sg_range(ptr: ubp.baseAddress, size: ubp.count * MemoryLayout<Vertex>.size)
+                let range = sg_range(ptr: ubp.baseAddress, size: ubp.count * MemoryLayout<Vertex>.stride)
                 var desc = sg_buffer_desc()
                 desc.data = range
                 return sg_make_buffer(&desc)
@@ -36,7 +36,7 @@ class OpaqueModelRenderer {
         }()
         self.indexBuffer = {
             self.indices.withUnsafeBufferPointer { ubp in
-                let range = sg_range(ptr: ubp.baseAddress, size: ubp.count * MemoryLayout<Int16>.size)
+                let range = sg_range(ptr: ubp.baseAddress, size: ubp.count * MemoryLayout<Int16>.stride)
                 var desc = sg_buffer_desc()
                 desc.type = SG_BUFFERTYPE_INDEXBUFFER
                 desc.data = range
