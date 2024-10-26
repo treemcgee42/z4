@@ -43,6 +43,12 @@ var imguiTarget = Target.target(
 
 let package = Package(
   name: "Z4",
+  platforms: [
+    .macOS(.v10_15)
+  ],
+  dependencies: [
+    .package(url: "https://github.com/tayloraswift/swift-png", from: "4.4.0")
+  ],
   targets: [
     glfwTarget,
     handmadeMathTarget,
@@ -50,7 +56,13 @@ let package = Package(
     sokolTarget,
     .executableTarget(
       name: "Z4",
-      dependencies: ["Glfw", "HandmadeMath", "Imgui", "Sokol"],
+      dependencies: [
+        "Glfw",
+        "HandmadeMath",
+        "Imgui",
+        "Sokol",
+        .product(name: "PNG", package: "swift-png")
+      ],
       swiftSettings: [
         .interoperabilityMode(.Cxx),
         .unsafeFlags(["-I/usr/local/include"], .when(platforms: [.macOS]))

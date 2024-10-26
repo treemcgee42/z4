@@ -20,6 +20,6 @@ vertex vs_out _main(vs_in inp [[stage_in]], constant vs_params_t& params [[buffe
        vs_out outp;
        outp.position = params.mvp * inp.position;
        outp.color = inp.color;
-       outp.uv = inp.uv * 5.0;
+       outp.uv = inp.uv;
        return outp;
 }

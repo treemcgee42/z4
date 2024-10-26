@@ -185,13 +185,13 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (leftFaceUvs.uMax, leftFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uMin, leftFaceUvs.vMax))))
         // (0,0,1) +10
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (leftFaceUvs.uMin, leftFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uMax, leftFaceUvs.vMin))))
         // (0,1,1) +11
         self.vertices.append(
           Vertex(

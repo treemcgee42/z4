@@ -9,5 +9,5 @@ struct fs_in {
 fragment float4 fs_main(fs_in in [[stage_in]],
                         texture2d<float> tex [[texture(0)]],
                         sampler smp [[sampler(0)]]) {
-    return float4(tex.sample(smp, in.uv).xyz, 1.0) * in.color;
+    return float4(tex.sample(smp, in.uv).xyz, 1.0);
 };

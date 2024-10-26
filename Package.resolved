@@ -1,0 +1,24 @@
+{
+  "originHash" : "540d957aa0d896556dac86d654f755a62ebd519365132c74076c65f3f24a660d",
+  "pins" : [
+    {
+      "identity" : "swift-hash",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tayloraswift/swift-hash",
+      "state" : {
+        "revision" : "4d70a941b7039358f2ec8565f6c3b53c05f6c6ef",
+        "version" : "0.6.3"
+      }
+    },
+    {
+      "identity" : "swift-png",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tayloraswift/swift-png",
+      "state" : {
+        "revision" : "aff420495467463b43d42c58b4dbb29ab74f4ccb",
+        "version" : "4.4.5"
+      }
+    }
+  ],
+  "version" : 3
+}
