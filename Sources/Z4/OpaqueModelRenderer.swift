@@ -11,6 +11,7 @@ class OpaqueModelRenderer {
 
     var vertices: [Vertex]
     var indices: [Int16]
+    let blockManager: BlockManager
     let textureManager: TextureManager
 
     struct Vertex {
@@ -19,9 +20,10 @@ class OpaqueModelRenderer {
         var uv: HMM_Vec2
     }
 
-    init(textureManager: TextureManager) {
+    init(blockManager: BlockManager, textureManager: TextureManager) {
         self.vertices = []
         self.indices = []
+        self.blockManager = blockManager
         self.textureManager = textureManager
     }
 
@@ -94,20 +96,22 @@ class OpaqueModelRenderer {
         self.pipeline = sg_make_pipeline(&pipelineDesc)
     }
 
-    func addBox(corner1: HMM_Vec3, corner2: HMM_Vec3,
-                textures: (bottom: String, top: String, left: String, right: String,
-                           front: String, back: String)) {
-        let minCorner = HMM_Vec3(Elements: (min(corner1[0], corner2[0]),
-                                            min(corner1[1], corner2[1]),
-                                            min(corner1[2], corner2[2])))
-        let maxCorner = HMM_Vec3(Elements: (max(corner1[0], corner2[0]),
-                                            max(corner1[1], corner2[1]),
-                                            max(corner1[2], corner2[2])))
+    func addBlock(name: String, at: HMM_Vec3) {
+        let blockInfo = self.blockManager.blockInfo(name: name)
+        for component in blockInfo.components {
+            self.addBox(component.at(at))
+        }
+    }
+
+    func addBox(_ boxInfo: BoxInfo) {
+        let minCorner = boxInfo.bounds.minCorner()
+        let maxCorner = boxInfo.bounds.maxCorner()
 
         let startIndex = Int16(self.vertices.count)
 
         // --- Front face
-        let frontFaceUvs = self.textureManager.getTextureUvs(textureName: textures.front)
+        let frontFaceUvs = self.textureManager.getTextureUvs(
+          textureName: boxInfo.textures.front)
         // (0,0,1)
         self.vertices.append(
           Vertex(
@@ -140,7 +144,8 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 1)
 
         // --- Back face
-        let backFaceUvs = self.textureManager.getTextureUvs(textureName: textures.back)
+        let backFaceUvs = self.textureManager.getTextureUvs(
+          textureName: boxInfo.textures.back)
         // (0,0,0) +4
         self.vertices.append(
           Vertex(
@@ -173,7 +178,8 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 6)
 
         // --- Left face
-        let leftFaceUvs = self.textureManager.getTextureUvs(textureName: textures.left)
+        let leftFaceUvs = self.textureManager.getTextureUvs(
+          textureName: boxInfo.textures.left)
         // (0,0,0) +8
         self.vertices.append(
           Vertex(
@@ -206,7 +212,8 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 11)
 
         // --- Right face
-        let rightFaceUvs = self.textureManager.getTextureUvs(textureName: textures.right)
+        let rightFaceUvs = self.textureManager.getTextureUvs(
+          textureName: boxInfo.textures.right)
         // (1,0,0) +12
         self.vertices.append(
           Vertex(
@@ -239,7 +246,8 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 12)
 
         // --- Bottom face
-        let bottomFaceUvs = self.textureManager.getTextureUvs(textureName: textures.bottom)
+        let bottomFaceUvs = self.textureManager.getTextureUvs(
+          textureName: boxInfo.textures.bottom)
         // (0,0,0) +16
         self.vertices.append(
           Vertex(
@@ -272,7 +280,8 @@ class OpaqueModelRenderer {
         indices.append(startIndex + 16)
 
         // --- Top face
-        let topFaceUvs = self.textureManager.getTextureUvs(textureName: textures.top)
+        let topFaceUvs = self.textureManager.getTextureUvs(
+          textureName: boxInfo.textures.top)
         // (0,1,0) +20
         self.vertices.append(
           Vertex(
