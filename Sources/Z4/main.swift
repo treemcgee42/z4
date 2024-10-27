@@ -52,15 +52,21 @@ func main() {
     opaqueModelRenderer.createBindings()
     opaqueModelRenderer.createPipeline()
 
+    let scene = Scene()
+
     var lastTime: UInt64 = 0
     while (glfwWindowShouldClose(windowingSystem.window) == 0) {
+        let deltaTimeSec = stm_sec(stm_laptime(&lastTime))
+
+        scene.tick(deltaTime: deltaTimeSec)
+
         var pass = sg_pass()
         pass.swapchain = windowingSystem.swapchain()
 
         var sokolImguiFrameDesc = simgui_frame_desc_t()
         sokolImguiFrameDesc.width = Int32(pass.swapchain.width)
         sokolImguiFrameDesc.height = Int32(pass.swapchain.height)
-        sokolImguiFrameDesc.delta_time = stm_sec(stm_laptime(&lastTime));
+        sokolImguiFrameDesc.delta_time = deltaTimeSec
         sokolImguiFrameDesc.dpi_scale = windowingSystem.dpiScale()
         simgui_new_frame(&sokolImguiFrameDesc);
 
