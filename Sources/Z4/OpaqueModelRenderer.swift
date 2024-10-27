@@ -113,25 +113,25 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 0, 1)),
-            uv: HMM_Vec2(Elements: (frontFaceUvs.uMin, frontFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uBeg, frontFaceUvs.vBeg))))
         // (1,0,1) +1
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 0, 1)),
-            uv: HMM_Vec2(Elements: (frontFaceUvs.uMax, frontFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uEnd, frontFaceUvs.vBeg))))
         // (0,1,1) +2
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 0, 1)),
-            uv: HMM_Vec2(Elements: (frontFaceUvs.uMin, frontFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uBeg, frontFaceUvs.vEnd))))
         // (1,1,1) +3
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 0, 1)),
-            uv: HMM_Vec2(Elements: (frontFaceUvs.uMax, frontFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (frontFaceUvs.uEnd, frontFaceUvs.vEnd))))
         indices.append(startIndex)
         indices.append(startIndex + 2)
         indices.append(startIndex + 3)
@@ -146,25 +146,25 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (backFaceUvs.uMin, backFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (backFaceUvs.uBeg, backFaceUvs.vBeg))))
         // (1,0,0) +5
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (backFaceUvs.uMax, backFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (backFaceUvs.uEnd, backFaceUvs.vBeg))))
         // (0,1,0) +6
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (backFaceUvs.uMin, backFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (backFaceUvs.uBeg, backFaceUvs.vEnd))))
         // (1,1,0) +7
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (backFaceUvs.uMax, backFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (backFaceUvs.uEnd, backFaceUvs.vEnd))))
         indices.append(startIndex + 4)
         indices.append(startIndex + 5)
         indices.append(startIndex + 7)
@@ -179,25 +179,25 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (leftFaceUvs.uMin, leftFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uBeg, leftFaceUvs.vBeg))))
         // (0,1,0) +9
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (leftFaceUvs.uMin, leftFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uBeg, leftFaceUvs.vEnd))))
         // (0,0,1) +10
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (leftFaceUvs.uMax, leftFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uEnd, leftFaceUvs.vBeg))))
         // (0,1,1) +11
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (leftFaceUvs.uMax, leftFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (leftFaceUvs.uEnd, leftFaceUvs.vEnd))))
         indices.append(startIndex + 10)
         indices.append(startIndex + 8)
         indices.append(startIndex + 9)
@@ -212,25 +212,25 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uMin, rightFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uBeg, rightFaceUvs.vBeg))))
         // (1,1,0) +13
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uMax, rightFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uEnd, rightFaceUvs.vBeg))))
         // (1,0,1) +14
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uMin, rightFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uBeg, rightFaceUvs.vEnd))))
         // (1,1,1) +15
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uMax, rightFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uEnd, rightFaceUvs.vEnd))))
         indices.append(startIndex + 14)
         indices.append(startIndex + 15)
         indices.append(startIndex + 13)
@@ -245,25 +245,25 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMin, bottomFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uBeg, bottomFaceUvs.vBeg))))
         // (1,0,0) +17
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMax, bottomFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uEnd, bottomFaceUvs.vBeg))))
         // (0,0,1) +18
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMin, bottomFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uBeg, bottomFaceUvs.vEnd))))
         // (1,0,1) +19
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 1, 0, 1)),
-            uv: HMM_Vec2(Elements: (bottomFaceUvs.uMax, bottomFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (bottomFaceUvs.uEnd, bottomFaceUvs.vEnd))))
         indices.append(startIndex + 18)
         indices.append(startIndex + 19)
         indices.append(startIndex + 17)
@@ -278,25 +278,25 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (topFaceUvs.uMin, topFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (topFaceUvs.uBeg, topFaceUvs.vBeg))))
         // (1,1,0) +21
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (topFaceUvs.uMax, topFaceUvs.vMin))))
+            uv: HMM_Vec2(Elements: (topFaceUvs.uEnd, topFaceUvs.vBeg))))
         // (0,1,1) +22
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (minCorner[0], maxCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (topFaceUvs.uMin, topFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (topFaceUvs.uBeg, topFaceUvs.vEnd))))
         // (1,1,1) +23
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (1, 0, 1, 1)),
-            uv: HMM_Vec2(Elements: (topFaceUvs.uMax, topFaceUvs.vMax))))
+            uv: HMM_Vec2(Elements: (topFaceUvs.uEnd, topFaceUvs.vEnd))))
         indices.append(startIndex + 22)
         indices.append(startIndex + 20)
         indices.append(startIndex + 21)

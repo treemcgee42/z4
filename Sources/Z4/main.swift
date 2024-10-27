@@ -38,17 +38,17 @@ func main() {
     let shaderManager = ShaderManager()
 
     let textureManager = TextureManager()
-    textureManager.loadTextureFromFile(textureName: "grassSide")
+    textureManager.createTextureAtlas()
 
     let opaqueModelRenderer = OpaqueModelRenderer(textureManager: textureManager)
     opaqueModelRenderer.addBox(
       corner1: HMM_Vec3(Elements: (-1, -1, -1)),
       corner2: HMM_Vec3(Elements: (1, 1, 1)),
-      textures: (bottom: "foo", top: "foo", left: "foo", right: "foo", front: "foo", back: "foo"))
+      textures: (bottom: "grassBottom", top: "grassTop", left: "grassSide", right: "grassSide", front: "grassSide", back: "grassSide"))
     opaqueModelRenderer.addBox(
       corner1: HMM_Vec3(Elements: (3, 3, 3)),
       corner2: HMM_Vec3(Elements: (2, 2, 2)),
-      textures: (bottom: "foo", top: "foo", left: "foo", right: "foo", front: "foo", back: "foo"))
+      textures: (bottom: "grassBottom", top: "grassTop", left: "grassSide", right: "grassSide", front: "grassSide", back: "grassSide"))
     opaqueModelRenderer.createBuffers()
     opaqueModelRenderer.createShaders(shaderManager: shaderManager)
     opaqueModelRenderer.createBindings()
