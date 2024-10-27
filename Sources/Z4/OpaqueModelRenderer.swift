@@ -96,8 +96,8 @@ class OpaqueModelRenderer {
         self.pipeline = sg_make_pipeline(&pipelineDesc)
     }
 
-    func addBlock(name: String, at: HMM_Vec3) {
-        let blockInfo = self.blockManager.blockInfo(name: name)
+    func addBlock(blockId: BlockId, at: HMM_Vec3) {
+        let blockInfo = self.blockManager.blockInfo(blockId: blockId)
         for component in blockInfo.components {
             self.addBox(component.at(at))
         }

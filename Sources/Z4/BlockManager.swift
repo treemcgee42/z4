@@ -47,16 +47,59 @@ struct BoxInfo {
 }
 
 struct BlockInfo {
-    var name: String
     var components: [BoxInfo]
 }
 
+struct BlockId: Hashable {
+    var data: UInt32
+
+    init(id: UInt16, additionalData: UInt16) {
+        self.data = (UInt32(additionalData) << 16) | UInt32(id)
+    }
+
+    func id() -> UInt16 {
+        // Extract the lower 16 bits.
+        return UInt16(data & 0xFFFF)
+    }
+
+    func additionalData() -> UInt16 {
+        // Extract the upper 16 bits
+        return UInt16((data >> 16) & 0xFFFF)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        // Hash only the `id` part.
+        hasher.combine(self.id())
+    }
+
+    static func == (lhs: BlockId, rhs: BlockId) -> Bool {
+        // Equality check based only on the `id` part.
+        return lhs.id() == rhs.id()
+    }
+}
+
+protocol Block {
+    func tick()
+}
+
+class GrassBlock: Block {
+    func tick() {}
+}
+
+class MovingGrassBlock: Block {
+    func tick() {
+        print("moving grass block ticks")
+    }
+}
+
 class BlockManager {
-    var blockInfoMap: [String:BlockInfo] = [:]
+    var numBlocks: UInt16 = 0
+    var blockIdMap: [String:BlockId] = [:]
+    var blockInfoMap: [BlockId:BlockInfo] = [:]
+    var blockClassMap: [BlockId:any Block] = [:]
 
     init() {
         let grassInfo = BlockInfo(
-          name: "grass",
           components: [
             BoxInfo(
               bounds: BoxBounds(corner1: (x: 0, y: 0, z: 0),
@@ -66,10 +109,22 @@ class BlockManager {
                          top: "grassTop", bottom: "grassBottom"))
           ]
         )
-        self.blockInfoMap[grassInfo.name] = grassInfo
+        self.registerBlock(name: "grass", info: grassInfo, cl: GrassBlock())
     }
 
-    func blockInfo(name: String) -> BlockInfo {
-        return self.blockInfoMap[name]!
+    func registerBlock(name: String, info: BlockInfo, cl: any Block) {
+        self.numBlocks += 1
+        let blockId = BlockId(id: self.numBlocks, additionalData: 0)
+        self.blockIdMap[name] = blockId
+        self.blockInfoMap[blockId] = info
+        self.blockClassMap[blockId] = cl
+    }
+
+    func blockInfo(blockId: BlockId) -> BlockInfo {
+        return self.blockInfoMap[blockId]!
+    }
+
+    func blockId(name: String) -> BlockId {
+        return self.blockIdMap[name]!
     }
 }
