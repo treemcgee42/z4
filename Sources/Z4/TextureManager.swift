@@ -7,6 +7,7 @@ class TextureManager {
     var sampler: sg_sampler?
 
     func createTexture(pixels: [UInt32], width: Int, height: Int) {
+        tracer.fnTrace1("width: \(width) height: \(height)")
         self.image = {
             var imageDesc = sg_image_desc()
             imageDesc.width = Int32(width)
@@ -53,6 +54,10 @@ class TextureManager {
             fatalError("\(error)")
         }
         let rgba = pngImage!.unpack(as: PNG.RGBA<UInt8>.self)
+        tracer.fnTrace2("""
+                          textureName: '\(textureName)' \
+                          width: \(pngImage!.size.x) height: \(pngImage!.size.y)
+                          """)
 
         self.createTexture(pixels: self.rgbaToUInt32Array(rgbaArray: rgba),
                            width: pngImage!.size.x,
