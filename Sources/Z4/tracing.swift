@@ -28,6 +28,14 @@ struct Tracer {
     func fnTrace2(_ message: String, functionName: String = #function) {
         self.fnTrace(message, functionName: functionName, level: 2)
     }
+
+    func fnAssert(condition: Bool, message: String,
+                  functionName: String = #function, fileName: String = #file,
+                  line: Int = #line) {
+        if !condition {
+            fatalError("\(fileName):\(line), in function \(functionName): \(message)")
+        }
+    }
 }
 
 @TaskLocal

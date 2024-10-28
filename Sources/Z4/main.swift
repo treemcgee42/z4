@@ -35,31 +35,20 @@ func main() {
     let camera = Camera3dPerspective(
       fov: Measurement(value: 60, unit: UnitAngle.degrees), aspectRatio: Float(windowSize.width)/Float(windowSize.height), near: 0.01, far: 1000.0,
       lookFrom: HMM_Vec3(Elements: (0.0, 1.5, 6.0)), lookAt: HMM_Vec3(Elements: (0.0, 0.0, 0.0)), upDirection: HMM_Vec3(Elements: (0.0, 1.0, 0.0)))
-    let shaderManager = ShaderManager()
-
-    let textureManager = TextureManager()
-    textureManager.createTextureAtlas()
-
-    let blockManager = BlockManager()
-    let grassBlockId = blockManager.blockId(name: "grass")
-
-    let opaqueModelRenderer = OpaqueModelRenderer(
-      blockManager: blockManager,
-      textureManager: textureManager)
-    opaqueModelRenderer.addBlock(blockId: grassBlockId, at: HMM_Vec3(Elements: (0, 0, 0)))
-    opaqueModelRenderer.addBlock(blockId: grassBlockId, at: HMM_Vec3(Elements: (1, 1, 1)))
-    opaqueModelRenderer.createBuffers()
-    opaqueModelRenderer.createShaders(shaderManager: shaderManager)
-    opaqueModelRenderer.createBindings()
-    opaqueModelRenderer.createPipeline()
 
     let scene = Scene()
+    let grassBlockId = scene.blockManager.blockId(name: "grass")
+    let movingGrassBlockId = scene.blockManager.blockId(name: "movingGrass")
+    scene.addBlock(at: Chunk.Position(x: 0, y: 0, z: 0), blockId: grassBlockId)
+    scene.addBlock(at: Chunk.Position(x: 1, y: 1, z: 1), blockId: movingGrassBlockId)
+    scene.scheduleBlockToTick(at: Chunk.Position(x: 1, y: 1, z: 1))
+    scene.createRenderResources()
 
     var lastTime: UInt64 = 0
     while (glfwWindowShouldClose(windowingSystem.window) == 0) {
         let deltaTimeSec = stm_sec(stm_laptime(&lastTime))
 
-        scene.tick(deltaTime: deltaTimeSec)
+        scene.frame(deltaTime: deltaTimeSec)
 
         var pass = sg_pass()
         pass.swapchain = windowingSystem.swapchain()
@@ -78,14 +67,14 @@ func main() {
         // ImGui.ShowDemoWindow();
 
         sg_begin_pass(&pass)
-        sg_apply_pipeline(opaqueModelRenderer.pipeline!);
-        sg_apply_bindings(&opaqueModelRenderer.bindings!);
+        sg_apply_pipeline(scene.opaqueModelRenderer.pipeline!);
+        sg_apply_bindings(&scene.opaqueModelRenderer.bindings!);
         var vs_params = vs_params_t(mvp: camera.viewProjectionMatrix)
         withUnsafeBytes(of: &vs_params) { buffer in
             var range = sg_range(ptr: buffer.baseAddress, size: buffer.count)
             sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &range)
         }
-        sg_draw(0, Int32(opaqueModelRenderer.indices.count), 1);
+        sg_draw(0, Int32(scene.opaqueModelRenderer.indexBufferNumIndices), 1);
         simgui_render();
         sg_end_pass();
         sg_commit();

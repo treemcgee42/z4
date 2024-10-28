@@ -57,6 +57,10 @@ struct BlockId: Hashable {
         self.data = (UInt32(additionalData) << 16) | UInt32(id)
     }
 
+    static func empty() -> BlockId {
+        return BlockId(id: 0, additionalData: 0)
+    }
+
     func id() -> UInt16 {
         // Extract the lower 16 bits.
         return UInt16(data & 0xFFFF)
@@ -65,6 +69,11 @@ struct BlockId: Hashable {
     func additionalData() -> UInt16 {
         // Extract the upper 16 bits
         return UInt16((data >> 16) & 0xFFFF)
+    }
+
+    mutating func setAdditionalData(_ newAdditionalData: UInt16) {
+        // Clear the upper 16 bits and set the new additional data.
+        self.data = (data & 0xFFFF) | (UInt32(newAdditionalData) << 16)
     }
 
     func hash(into hasher: inout Hasher) {
@@ -79,16 +88,47 @@ struct BlockId: Hashable {
 }
 
 protocol Block {
-    func tick()
+    func tick(scene: Scene, position: Chunk.Position, blockId: BlockId)
 }
 
 class GrassBlock: Block {
-    func tick() {}
+    func tick(scene: Scene, position: Chunk.Position, blockId: BlockId) {}
 }
 
 class MovingGrassBlock: Block {
-    func tick() {
-        print("moving grass block ticks")
+    struct AdditionalData {
+        var tickCounter: UInt8
+        var axisToMoveAlong: UInt8
+
+        init(_ additionalData: UInt16) {
+            self.tickCounter = (UInt8(additionalData >> 8) & 0xFF)
+            self.axisToMoveAlong = UInt8(additionalData & 0xFF)
+        }
+
+        func pack() -> UInt16 {
+            var packed: UInt16 = 0
+            packed |= (UInt16(self.tickCounter) & 0xFF) << 8
+            packed |= UInt16(self.axisToMoveAlong) & 0xFF
+            return packed
+        }
+    }
+
+    func tick(scene: Scene, position: Chunk.Position, blockId: BlockId) {
+        var additionalData = AdditionalData(blockId.additionalData())
+        additionalData.tickCounter += 1
+
+        var newPosition = position
+        if additionalData.tickCounter % 40 == 0 {
+            newPosition = newPosition.down()
+            additionalData.tickCounter = 0
+        } else if additionalData.tickCounter % 20 == 0 {
+            newPosition = newPosition.up()
+        }
+
+        let newBlockId = BlockId(id: blockId.id(), additionalData: additionalData.pack())
+        scene.removeBlock(at: position)
+        scene.addBlock(at: newPosition, blockId: newBlockId)
+        scene.scheduleBlockToTick(at: newPosition)
     }
 }
 
@@ -110,6 +150,12 @@ class BlockManager {
           ]
         )
         self.registerBlock(name: "grass", info: grassInfo, cl: GrassBlock())
+        self.registerBlock(name: "movingGrass", info: grassInfo, cl: MovingGrassBlock())
+    }
+
+    func tick(scene: Scene, position: Chunk.Position, blockId: BlockId) {
+        let cl = self.blockClassMap[blockId]!
+        cl.tick(scene: scene, position: position, blockId: blockId)
     }
 
     func registerBlock(name: String, info: BlockInfo, cl: any Block) {
@@ -121,7 +167,13 @@ class BlockManager {
     }
 
     func blockInfo(blockId: BlockId) -> BlockInfo {
-        return self.blockInfoMap[blockId]!
+        guard let blockInfo = self.blockInfoMap[blockId] else {
+            tracer.fnAssert(
+              condition: false,
+              message: "blockId (id=\(blockId.id())) not found in map")
+            fatalError("")
+        }
+        return blockInfo
     }
 
     func blockId(name: String) -> BlockId {

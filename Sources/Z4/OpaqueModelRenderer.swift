@@ -5,6 +5,7 @@ import Sokol
 class OpaqueModelRenderer {
     var vertexBuffer: sg_buffer?
     var indexBuffer: sg_buffer?
+    var indexBufferNumIndices = 0
     var shader: sg_shader?
     var bindings: sg_bindings?
     var pipeline: sg_pipeline?
@@ -28,6 +29,9 @@ class OpaqueModelRenderer {
     }
 
     func createBuffers() {
+        if let vb = self.vertexBuffer {
+            sg_destroy_buffer(vb)
+        }
         self.vertexBuffer = {
             self.vertices.withUnsafeBufferPointer { ubp in
                 let range = sg_range(ptr: ubp.baseAddress, size: ubp.count * MemoryLayout<Vertex>.stride)
@@ -36,6 +40,9 @@ class OpaqueModelRenderer {
                 return sg_make_buffer(&desc)
             }
         }()
+        if let ib = self.indexBuffer {
+            sg_destroy_buffer(ib)
+        }
         self.indexBuffer = {
             self.indices.withUnsafeBufferPointer { ubp in
                 let range = sg_range(ptr: ubp.baseAddress, size: ubp.count * MemoryLayout<Int16>.stride)
@@ -45,6 +52,7 @@ class OpaqueModelRenderer {
                 return sg_make_buffer(&desc)
             }
         }()
+        self.indexBufferNumIndices = self.indices.count
     }
 
     func createShaders(shaderManager: ShaderManager) {
@@ -219,25 +227,25 @@ class OpaqueModelRenderer {
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uBeg, rightFaceUvs.vBeg))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uEnd, rightFaceUvs.vBeg))))
         // (1,1,0) +13
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], minCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uEnd, rightFaceUvs.vBeg))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uEnd, rightFaceUvs.vEnd))))
         // (1,0,1) +14
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], minCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uBeg, rightFaceUvs.vEnd))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uBeg, rightFaceUvs.vBeg))))
         // (1,1,1) +15
         self.vertices.append(
           Vertex(
             position: HMM_Vec4(Elements: (maxCorner[0], maxCorner[1], maxCorner[2], 1)),
             color: HMM_Vec4(Elements: (0, 1, 1, 1)),
-            uv: HMM_Vec2(Elements: (rightFaceUvs.uEnd, rightFaceUvs.vEnd))))
+            uv: HMM_Vec2(Elements: (rightFaceUvs.uBeg, rightFaceUvs.vEnd))))
         indices.append(startIndex + 14)
         indices.append(startIndex + 15)
         indices.append(startIndex + 13)
