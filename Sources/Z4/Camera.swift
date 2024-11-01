@@ -7,8 +7,12 @@ import Imgui
 ///
 /// Assumes right-handed coordinate system and column-major matrices.
 class Camera3dPerspective {
+    let windowState: WindowState
+
     var fov: Measurement<UnitAngle>
-    var aspectRatio: Float
+    var aspectRatio: Float {
+        return Float(windowState.windowSize.width) / Float(windowState.windowSize.height)
+    }
     var near: Float
     var far: Float
     var lookFrom: HMM_Vec3
@@ -20,21 +24,46 @@ class Camera3dPerspective {
     var viewProjectionMatrix: HMM_Mat4 {
         return HMM_MulM4(self.projectionMatrix, self.viewMatrix)
     }
-    
-    init(fov: Measurement<UnitAngle>, aspectRatio: Float, near: Float, far: Float,
-         lookFrom: HMM_Vec3, lookAt: HMM_Vec3, upDirection: HMM_Vec3) {
+
+    init(fov: Measurement<UnitAngle>, near: Float, far: Float,
+         lookFrom: HMM_Vec3, lookAt: HMM_Vec3, upDirection: HMM_Vec3,
+         windowState: WindowState) {
         self.fov = fov
-        self.aspectRatio = aspectRatio
         self.near = near
         self.far = far
         self.lookFrom = lookFrom
         self.lookAt = lookAt
         self.upDirection = upDirection
+        self.windowState = windowState
 
-        self.projectionMatrix = Camera3dPerspective.computeProjectionMatrix(
-          fov: fov, aspectRatio: aspectRatio, near: near, far: far)
         self.viewMatrix = Camera3dPerspective.computeViewMatrix(
-          lookFrom: lookFrom, lookAt: lookAt, upDirection: upDirection)
+          lookFrom: lookFrom,
+          lookAt: lookAt,
+          upDirection: upDirection)
+        self.projectionMatrix = Camera3dPerspective.computeProjectionMatrix(
+          fov: fov,
+          aspectRatio: Float(windowState.windowSize.width) / Float(windowState.windowSize.height),
+          near: near,
+          far: far)
+
+        windowState.registerReactor { [weak self] to, changedPropertyId in
+            if self == nil {
+                return true
+            }
+
+            switch changedPropertyId {
+            case to.windowSizeId:
+                self?.windowSizeReactor()
+            default:
+                break
+            }
+
+            return false
+        }
+    }
+
+    func windowSizeReactor() {
+        self.recomputeProjectionMatrix()
     }
 
     static func computeProjectionMatrix(
@@ -54,7 +83,7 @@ class Camera3dPerspective {
     ) -> HMM_Mat4 {
         return HMM_LookAt_RH(lookFrom, lookAt, upDirection)
     }
-    
+
     func recomputeProjectionMatrix() {
         self.projectionMatrix = Camera3dPerspective.computeProjectionMatrix(
           fov: self.fov, aspectRatio: self.aspectRatio, near: self.near, far: self.far)
@@ -64,10 +93,9 @@ class Camera3dPerspective {
         self.viewMatrix = Camera3dPerspective.computeViewMatrix(
           lookFrom: self.lookFrom, lookAt: self.lookAt, upDirection: self.upDirection)
     }
-    
+
     func imguiDebugWindow() {
         var fov = Float(self.fov.converted(to: .degrees).value)
-        var aspectRatio = self.aspectRatio
         var near = self.near
         var far = self.far
         var lookFrom: [Float] = [self.lookFrom[0], self.lookFrom[1], self.lookFrom[2]]
@@ -77,7 +105,6 @@ class Camera3dPerspective {
         if ImGui.CollapsingHeader("Camera") {
             ImGui.SeparatorText("Perspective")
             ImGui.InputFloat("fov (degrees)", &fov, 1, 179, "%.3f")
-            ImGui.InputFloat("aspect ratio", &aspectRatio, 1.3, 2.3, "%.3f")
             ImGui.InputFloat("near", &near, 0.001, 1, "%.3f")
             ImGui.InputFloat("far", &far, 1, 100000, "%.3f")
 
@@ -87,7 +114,6 @@ class Camera3dPerspective {
             ImGui.InputFloat3("up direction", &upDirection);
 
             self.fov = Measurement(value: Double(fov), unit: UnitAngle.degrees)
-            self.aspectRatio = aspectRatio
             self.near = near
             self.far = far
             self.recomputeProjectionMatrix()

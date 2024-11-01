@@ -4,8 +4,67 @@ import Glfw
 import Imgui
 import Sokol
 
+class WindowState {
+    private var _windowSize: Size<Int>
+    var windowSizeId: PropertyId
+    var windowSize: Size<Int> {
+        set {
+            self._windowSize = newValue
+            for (index, reactor) in self.reactors.enumerated().reversed() {
+                let removeReactor = reactor(self, self.windowSizeId)
+                if removeReactor {
+                    self.reactors.remove(at: index)
+                }
+            }
+        }
+        get {
+            return self._windowSize
+        }
+    }
+
+    private var _framebufferSize: Size<Int>
+    var framebufferSizeId: PropertyId
+    var framebufferSize: Size<Int> {
+        set {
+            self._framebufferSize = newValue
+            for (index, reactor) in self.reactors.enumerated().reversed() {
+                let removeReactor = reactor(self, self.framebufferSizeId)
+                if removeReactor {
+                    self.reactors.remove(at: index)
+                }
+            }
+        }
+        get {
+            return self._framebufferSize
+        }
+    }
+
+    typealias WindowStateReactor = (_ to: WindowState, _ changedPropertyId: PropertyId) -> Bool
+    private var reactors: [WindowStateReactor]
+
+    init() {
+        var propertyId = 0
+
+        self._windowSize = .init(width: 0, height: 0)
+        self.windowSizeId = propertyId
+        propertyId += 1
+
+        self._framebufferSize = .init(width: 0, height: 0)
+        self.framebufferSizeId = propertyId
+        propertyId += 1
+
+        self.reactors = []
+    }
+
+    func registerReactor(_ r: @escaping WindowStateReactor) {
+        self.reactors.append(r)
+    }
+}
+
 @MainActor
 class WindowingSystem {
+    let windowState: WindowState
+
     var window: OpaquePointer
 
     var cocoaWindow: NSWindow
@@ -17,9 +76,10 @@ class WindowingSystem {
     let metalDepthFormat: MTLPixelFormat = .depth32Float
     var depthTexture: MTLTexture?
 
-    var prevFramebufferSize: (width: Int, height: Int) = (0, 0)
+    var prevFramebufferSize: Size<Int> = .init(width: 0, height: 0)
 
-    init(title: String, width: Int32, height: Int32, mtlDevice: MTLDevice) {
+    init(title: String, size: Size<Int>, mtlDevice: MTLDevice, windowState: WindowState) {
+        self.windowState = windowState
         self.mtlDevice = mtlDevice
 
         glfwInit()
@@ -33,7 +93,7 @@ class WindowingSystem {
         self.mtlSwapchain = CAMetalLayer()
         self.mtlSwapchain.device = self.mtlDevice
         self.mtlSwapchain.isOpaque = true
-        self.window = glfwCreateWindow(width, height, title, nil, nil)
+        self.window = glfwCreateWindow(Int32(size.width), Int32(size.height), title, nil, nil)
         self.cocoaWindow = glfwGetCocoaWindow(window) as! NSWindow
         self.cocoaWindow.contentView!.layer = self.mtlSwapchain
         self.cocoaWindow.contentView!.wantsLayer = true
@@ -49,13 +109,31 @@ class WindowingSystem {
         glfwSetCursorEnterCallback(self.window, cursorEnterCallback)
         glfwSetCharCallback(self.window, charCallback)
         glfwSetMonitorCallback(monitorCallback)
+
+        self.windowState.windowSize = self.windowSize()
+        self.windowState.framebufferSize = self.framebufferSize()
+        self.windowState.registerReactor { [weak self] to, changedPropertyId in
+            if self == nil {
+                return true
+            }
+
+            switch changedPropertyId {
+            case to.framebufferSizeId:
+                self?.framebufferResizedReactor(newFramebufferSize: to.framebufferSize)
+            default:
+                break
+            }
+
+            return false
+        }
     }
 
-    private func createDepthTexture(width: Int, height: Int) {
+    private func createDepthTexture(framebufferSize: Size<Int>) {
+        tracer.fnTrace1( "" )
         let depthDescriptor = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: self.metalDepthFormat,
-            width: width,
-            height: height,
+            width: framebufferSize.width,
+            height: framebufferSize.height,
             mipmapped: false
         )
         depthDescriptor.usage = [.renderTarget]
@@ -68,18 +146,18 @@ class WindowingSystem {
         return Float(self.cocoaWindow.backingScaleFactor)
     }
 
-    func windowSize() -> (width: Int, height: Int) {
+    func windowSize() -> Size<Int> {
         var w: Int32 = 0
         var h: Int32 = 0
         glfwGetWindowSize(self.window, &w, &h)
-        return (width: Int(w), height: Int(h))
+        return .init(width: Int(w), height: Int(h))
     }
 
-    func framebufferSize() -> (width: Int, height: Int) {
+    func framebufferSize() -> Size<Int> {
         var w: Int32 = 0
         var h: Int32 = 0
         glfwGetFramebufferSize(self.window, &w, &h)
-        return (width: Int(w), height: Int(h))
+        return .init(width: Int(w), height: Int(h))
     }
 
     func environment() -> sg_environment {
@@ -95,12 +173,20 @@ class WindowingSystem {
         )
     }
 
-    private func framebufferResized() -> Bool {
-        return self.prevFramebufferSize != self.framebufferSize()
+    func framebufferResizedReactor(newFramebufferSize: Size<Int>) {
+        self.createDepthTexture(framebufferSize: newFramebufferSize)
     }
 
     func swapchain() -> sg_swapchain {
-        let framebufferSize = self.framebufferSize()
+        let windowSize = self.windowSize()
+        let framebufferSize = framebufferSize()
+        if self.prevFramebufferSize != framebufferSize {
+            tracer.fnTrace1( "window size changed" )
+            self.windowState.windowSize = .init(width: windowSize.width, height: windowSize.height)
+            self.windowState.framebufferSize = .init(width: framebufferSize.width, height: framebufferSize.height)
+        }
+        self.prevFramebufferSize = framebufferSize
+
         self.mtlSwapchain.drawableSize = CGSize(width: framebufferSize.width, height: framebufferSize.height)
 
         var swapchain = sg_swapchain()
@@ -110,9 +196,6 @@ class WindowingSystem {
         swapchain.color_format = SG_PIXELFORMAT_BGRA8
         swapchain.depth_format = self.depthFormat
         let nextDrawable = self.mtlSwapchain.nextDrawable()!
-        if self.framebufferResized() {
-            self.createDepthTexture(width: framebufferSize.width, height: framebufferSize.height)
-        }
         swapchain.metal.current_drawable = UnsafeRawPointer(Unmanaged.passUnretained(nextDrawable).toOpaque())
         swapchain.metal.depth_stencil_texture = UnsafeRawPointer(Unmanaged.passUnretained(self.depthTexture!).toOpaque())
         return swapchain

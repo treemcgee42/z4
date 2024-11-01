@@ -6,6 +6,20 @@ import HandmadeMath
 import Imgui
 import Sokol
 
+@MainActor
+final class MainActorState {
+    static let shared = MainActorState()
+
+    var windowState: WindowState = WindowState()
+}
+
+typealias PropertyId = Int
+
+struct Size<T: Equatable>: Equatable {
+    var width: T
+    var height: T
+}
+
 struct vs_params_t {
     var mvp: HMM_Mat4
 }
@@ -16,7 +30,10 @@ func main() {
 
     let mtlDevice = MTLCreateSystemDefaultDevice()!
 
-    let windowingSystem = WindowingSystem(title: "Hello Triangle", width: 640, height: 480, mtlDevice: mtlDevice)
+    let windowingSystem = WindowingSystem(title: "Hello Triangle",
+                                          size: .init(width: 640, height: 480),
+                                          mtlDevice: mtlDevice,
+                                          windowState: MainActorState.shared.windowState)
 
     var sokolDesc = sg_desc()
     sokolDesc.environment = windowingSystem.environment()
@@ -31,10 +48,14 @@ func main() {
 
     stm_setup();
 
-    let windowSize = windowingSystem.windowSize()
     let camera = Camera3dPerspective(
-      fov: Measurement(value: 60, unit: UnitAngle.degrees), aspectRatio: Float(windowSize.width)/Float(windowSize.height), near: 0.01, far: 1000.0,
-      lookFrom: HMM_Vec3(Elements: (0.0, 1.5, 6.0)), lookAt: HMM_Vec3(Elements: (0.0, 0.0, 0.0)), upDirection: HMM_Vec3(Elements: (0.0, 1.0, 0.0)))
+      fov: Measurement(value: 60, unit: UnitAngle.degrees),
+      near: 0.01,
+      far: 1000.0,
+      lookFrom: HMM_Vec3(Elements: (0.0, 1.5, 6.0)),
+      lookAt: HMM_Vec3(Elements: (0.0, 0.0, 0.0)),
+      upDirection: HMM_Vec3(Elements: (0.0, 1.0, 0.0)),
+      windowState: MainActorState.shared.windowState)
 
     let scene = Scene()
     let grassBlockId = scene.blockManager.blockId(name: "grass")
