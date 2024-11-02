@@ -48,13 +48,17 @@ func main() {
 
     stm_setup();
 
-    let camera = Camera3dPerspective(
-      fov: Measurement(value: 60, unit: UnitAngle.degrees),
-      near: 0.01,
-      far: 1000.0,
-      lookFrom: HMM_Vec3(Elements: (0.0, 1.5, 6.0)),
-      lookAt: HMM_Vec3(Elements: (0.0, 0.0, 0.0)),
-      upDirection: HMM_Vec3(Elements: (0.0, 1.0, 0.0)),
+    let camera = Camera3d(
+      perspective: .init(fov: Measurement(value: 60, unit: UnitAngle.degrees),
+                         aspectRatio: 16.0 / 9.0, // doesn't really matter, will get overriden
+                         near: 0.01, far: 1000.0),
+      orthographic: .init(left: -2, right: 18,
+                          bottom: -2, top: 18,
+                          near: 0.01, far: 1000.0),
+      projectionKind: .orthographic,
+      view: .init(lookFrom: HMM_Vec3(Elements: (0.0, 1.5, 6.0)),
+                  lookAt: HMM_Vec3(Elements: (0.0, 0.0, 0.0)),
+                  upDirection: HMM_Vec3(Elements: (0.0, 1.0, 0.0))),
       windowState: MainActorState.shared.windowState)
 
     let scene = Scene()
