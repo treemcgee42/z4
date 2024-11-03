@@ -4,65 +4,10 @@ import Glfw
 import Imgui
 import Sokol
 
-class WindowState {
-    private var _windowSize: Size<Int>
-    var windowSizeId: PropertyId
-    var windowSize: Size<Int> {
-        set {
-            self._windowSize = newValue
-            for (index, reactor) in self.reactors.enumerated().reversed() {
-                let removeReactor = reactor(self, self.windowSizeId)
-                if removeReactor {
-                    self.reactors.remove(at: index)
-                }
-            }
-        }
-        get {
-            return self._windowSize
-        }
-    }
-
-    private var _framebufferSize: Size<Int>
-    var framebufferSizeId: PropertyId
-    var framebufferSize: Size<Int> {
-        set {
-            self._framebufferSize = newValue
-            for (index, reactor) in self.reactors.enumerated().reversed() {
-                let removeReactor = reactor(self, self.framebufferSizeId)
-                if removeReactor {
-                    self.reactors.remove(at: index)
-                }
-            }
-        }
-        get {
-            return self._framebufferSize
-        }
-    }
-
-    typealias WindowStateReactor = (_ to: WindowState, _ changedPropertyId: PropertyId) -> Bool
-    private var reactors: [WindowStateReactor]
-
-    init() {
-        var propertyId = 0
-
-        self._windowSize = .init(width: 0, height: 0)
-        self.windowSizeId = propertyId
-        propertyId += 1
-
-        self._framebufferSize = .init(width: 0, height: 0)
-        self.framebufferSizeId = propertyId
-        propertyId += 1
-
-        self.reactors = []
-    }
-
-    func registerReactor(_ r: @escaping WindowStateReactor) {
-        self.reactors.append(r)
-    }
-}
-
 @MainActor
 class WindowingSystem {
+    // Global state
+    let inputState: InputState
     let windowState: WindowState
 
     var window: OpaquePointer
@@ -78,7 +23,9 @@ class WindowingSystem {
 
     var prevFramebufferSize: Size<Int> = .init(width: 0, height: 0)
 
-    init(title: String, size: Size<Int>, mtlDevice: MTLDevice, windowState: WindowState) {
+    init(title: String, size: Size<Int>, mtlDevice: MTLDevice,
+         inputState: InputState, windowState: WindowState) {
+        self.inputState = inputState
         self.windowState = windowState
         self.mtlDevice = mtlDevice
 
@@ -126,6 +73,8 @@ class WindowingSystem {
 
             return false
         }
+
+        glfwSetWindowUserPointer(self.window, Unmanaged.passUnretained(self.inputState).toOpaque())
     }
 
     private func createDepthTexture(framebufferSize: Size<Int>) {
@@ -204,6 +153,16 @@ class WindowingSystem {
 
 func mouseButtonCallback(window: OpaquePointer?, button: Int32, action: Int32, mods: Int32) {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods)
+    if button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS {
+        var xPos: Double = 0
+        var yPos: Double = 0
+        glfwGetCursorPos(window, &xPos, &yPos);
+        guard let userPointer = glfwGetWindowUserPointer(window) else {
+            fatalError("")
+        }
+        let inputState = Unmanaged<InputState>.fromOpaque(userPointer).takeUnretainedValue()
+        inputState.leftMouseButtonClick = Vec2f(x: Float(xPos), y: Float(yPos))
+    }
 }
 
 func cursorPosCallback(window: OpaquePointer?, posX: Double, posY: Double) {

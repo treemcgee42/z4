@@ -5,13 +5,13 @@ import Sokol
 
 class ShaderManager {
     var bytecodeData: Data?
-    
+
     func loadShaderBytecode(shaderName: String) {
-        let filePath = "Sources/Z4/Shaders/\(shaderName).metallib"
+        let filePath = "Sources/Z4Lib/Shaders/\(shaderName).metallib"
         guard FileManager.default.fileExists(atPath: filePath) else {
             fatalError("Shader file \(filePath) not found.")
         }
-        
+
         do {
             bytecodeData = try Data(contentsOf: URL(fileURLWithPath: filePath))
         } catch {
@@ -29,7 +29,7 @@ class ShaderManager {
     }
 
     private func getShaderSourceUrl(shaderName: String) -> URL {
-        let filePath = "Sources/Z4/Shaders/\(shaderName).metal"
+        let filePath = "Sources/Z4Lib/Shaders/\(shaderName).metal"
         guard FileManager.default.fileExists(atPath: filePath) else {
             fatalError("Shader file \(filePath) not found.")
         }

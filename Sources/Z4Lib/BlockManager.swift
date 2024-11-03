@@ -53,6 +53,13 @@ struct BlockInfo {
 struct BlockId: Hashable {
     var data: UInt32
 
+    /**
+     Initialize with just the id and set additional data to 0.
+     */
+    init(id: UInt16) {
+        self.init(id: id, additionalData: 0)
+    }
+
     init(id: UInt16, additionalData: UInt16) {
         self.data = (UInt32(additionalData) << 16) | UInt32(id)
     }

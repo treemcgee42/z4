@@ -54,8 +54,8 @@ let package = Package(
     handmadeMathTarget,
     imguiTarget,
     sokolTarget,
-    .executableTarget(
-      name: "Z4",
+    .target(
+      name: "Z4Lib",
       dependencies: [
         "Glfw",
         "HandmadeMath",
@@ -63,6 +63,28 @@ let package = Package(
         "Sokol",
         .product(name: "PNG", package: "swift-png")
       ],
+      swiftSettings: [
+        .interoperabilityMode(.Cxx),
+        .unsafeFlags(["-I/usr/local/include"], .when(platforms: [.macOS]))
+      ],
+      linkerSettings: [
+        .unsafeFlags(["-L/usr/local/lib"], .when(platforms: [.macOS]))
+      ]
+    ),
+    .executableTarget(
+      name: "Z4",
+      dependencies: ["Z4Lib"],
+      swiftSettings: [
+        .interoperabilityMode(.Cxx),
+        .unsafeFlags(["-I/usr/local/include"], .when(platforms: [.macOS]))
+      ],
+      linkerSettings: [
+        .unsafeFlags(["-L/usr/local/lib"], .when(platforms: [.macOS]))
+      ]
+    ),
+    .testTarget(
+      name: "Z4Tests",
+      dependencies: ["Z4"],
       swiftSettings: [
         .interoperabilityMode(.Cxx),
         .unsafeFlags(["-I/usr/local/include"], .when(platforms: [.macOS]))

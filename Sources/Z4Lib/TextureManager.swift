@@ -12,8 +12,8 @@ struct Uvs {
 }
 
 class TextureManager {
-    let pathToTextureDir = "Sources/Z4/Assets/Textures"
-    let pathToAtlas = "Sources/Z4/Assets/Generated/textureAtlas.png"
+    let pathToTextureDir = "Sources/Z4Lib/Assets/Textures"
+    let pathToAtlas = "Sources/Z4Lib/Assets/Generated/textureAtlas.png"
 
     var textureUvMap: [String: Uvs] = [:]
 

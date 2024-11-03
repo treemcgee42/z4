@@ -7,13 +7,22 @@ import Imgui
 ///
 /// Assumes right-handed coordinate system and column-major matrices.
 class Camera3d {
+    let inputState: InputState
+    let pickingState: PickingState
     let windowState: WindowState
 
     var projectionKind: ProjectionKind
 
     var aspectRatio: Float {
-        return Float(windowState.windowSize.width) / Float(windowState.windowSize.height)
+        return Float(windowWidth) / Float(windowHeight)
     }
+    var windowWidth: Int {
+        return windowState.windowSize.width
+    }
+    var windowHeight: Int {
+        return windowState.windowSize.height
+    }
+
     var viewParams: ViewParams
     var orthographicParams: OrthographicParams
     var perspectiveParams: PerspectiveParams
@@ -31,16 +40,12 @@ class Camera3d {
 
     struct PerspectiveParams {
         var fov: Measurement<UnitAngle>
-        var aspectRatio: Float
         var near: Float
         var far: Float
     }
 
     struct OrthographicParams {
-        var left: Float
-        var right: Float
-        var bottom: Float
-        var top: Float
+        var width: Float
         var near: Float
         var far: Float
     }
@@ -54,11 +59,13 @@ class Camera3d {
     init(perspective: PerspectiveParams, orthographic: OrthographicParams,
          projectionKind: ProjectionKind,
          view: ViewParams,
-         windowState: WindowState) {
+         inputState: InputState, pickingState: PickingState, windowState: WindowState) {
         self.perspectiveParams = perspective
         self.orthographicParams = orthographic
         self.projectionKind = projectionKind
         self.viewParams = view
+        self.inputState = inputState
+        self.pickingState = pickingState
         self.windowState = windowState
 
         self.recomputeViewMatrix()
@@ -78,24 +85,77 @@ class Camera3d {
 
             return false
         }
+
+        self.inputState.registerReactor { [weak self] to, changedPropertyId in
+            if self == nil {
+                return true
+            }
+
+            switch changedPropertyId {
+            case to.leftMouseButtonClickId:
+                let p = to.leftMouseButtonClick
+                self!.pickingState.clickRay = self!.unproject(point: p)
+            default:
+                break
+            }
+
+            return false
+        }
+    }
+
+    static func unprojectOrthographic(
+      point: Vec2f,
+      viewParams: ViewParams,
+      orthoWidth: Float,
+      orthoHeight: Float,
+      windowSize: Size<Int>) -> Ray {
+        // Vector from lookFrom to lookAt
+        let camDirection = Vec3f(viewParams.lookAt) - Vec3f(viewParams.lookFrom)
+
+        // In window coordinates, Y is down.
+        // In Metal, NDC is (-1, -1, 0) to (1, 1, 1), Y is up.
+        let ndc = Vec3f(x: 2 * point.x / Float(windowSize.width) - 1,
+                        y: 1 - 2 * point.y / Float(windowSize.height),
+                        z: 0)
+
+        let coordsScaledToFrustum = Vec2f(x: ndc.x * orthoWidth / 2,
+                                          y: ndc.y * orthoHeight / 2)
+
+        let camRight = Vec3f.normalize(Vec3f.crossProduct(camDirection, Vec3f(viewParams.upDirection)))
+        let camUp = Vec3f.normalize(Vec3f.crossProduct(camRight, camDirection))
+
+        let origin = (Vec3f(viewParams.lookFrom) +
+                        (coordsScaledToFrustum.x * camRight ) +
+                        (coordsScaledToFrustum.y * camUp))
+        let direction = camDirection
+
+        return Ray(origin: origin, direction: direction)
+    }
+
+    func unproject(point: Vec2f) -> Ray {
+        return Self.unprojectOrthographic(point: point,
+                                          viewParams: self.viewParams,
+                                          orthoWidth: self.orthographicParams.width,
+                                          orthoHeight: self.orthographicParams.width / self.aspectRatio,
+                                          windowSize: self.windowState.windowSize)
     }
 
     func windowSizeReactor() {
         self.recomputeProjectionMatrix()
     }
 
-    static func computeOrthographicProjectionMatrix(_ p: OrthographicParams) -> HMM_Mat4 {
-        return HMM_Orthographic_RH_ZO(p.left, p.right,
-                                      p.bottom, p.top,
-                                      p.near, p.far)
+    static func computeOrthographicProjectionMatrix(
+      left: Float, right: Float,
+      bottom: Float, top: Float,
+      near: Float, far: Float) -> HMM_Mat4 {
+        return HMM_Orthographic_RH_ZO(left, right,
+                                      bottom, top,
+                                      near, far)
     }
 
-    static func computePerspectiveProjectionMatrix(_ p: PerspectiveParams) -> HMM_Mat4 {
-        return HMM_Perspective_RH_ZO(
-          Float(p.fov.converted(to: .radians).value),
-          p.aspectRatio,
-          p.near,
-          p.far)
+    static func computePerspectiveProjectionMatrix(
+      fovRadians: Float, aspectRatio: Float, near: Float, far: Float) -> HMM_Mat4 {
+        return HMM_Perspective_RH_ZO(fovRadians, aspectRatio, near, far)
     }
 
     static func computeViewMatrix(_ p: ViewParams) -> HMM_Mat4 {
@@ -105,16 +165,21 @@ class Camera3d {
     func recomputeProjectionMatrix() {
         switch self.projectionKind {
         case .orthographic:
-            let width = self.orthographicParams.right - self.orthographicParams.left
-            let height = width / self.aspectRatio
-            self.orthographicParams.top = height + self.orthographicParams.bottom
+            let left = -self.orthographicParams.width / 2
+            let right = self.orthographicParams.width / 2
+            let orthoHeight = self.orthographicParams.width / self.aspectRatio
+            let bottom = -orthoHeight / 2
+            let top = orthoHeight / 2
 
             self.projectionMatrix = Camera3d.computeOrthographicProjectionMatrix(
-              self.orthographicParams)
+              left: left, right: right,
+              bottom: bottom, top: top,
+              near: self.orthographicParams.near, far: self.orthographicParams.far)
         case .perspective:
-            self.perspectiveParams.aspectRatio = self.aspectRatio
+            let fovRadians = self.perspectiveParams.fov.converted(to: .radians).value
             self.projectionMatrix = Camera3d.computePerspectiveProjectionMatrix(
-              self.perspectiveParams)
+              fovRadians: Float(fovRadians), aspectRatio: self.aspectRatio,
+              near: self.perspectiveParams.near, far: self.perspectiveParams.far)
         }
     }
 
@@ -156,10 +221,7 @@ class Camera3d {
             case orthographicProjectionKind:
                 self.projectionKind = .orthographic
                 var p = self.orthographicParams
-                ImGui.InputFloat("left", &p.left, -1000, 1000, "%.1f")
-                ImGui.InputFloat("right", &p.right, -1000, 1000, "%.1f")
-                ImGui.InputFloat("bottom", &p.bottom, -1000, 1000, "%.1f")
-                ImGui.InputFloat("top", &p.top, -1000, 1000, "%.1f")
+                ImGui.InputFloat("width", &p.width, 1, 1000, "%.1f")
                 ImGui.InputFloat("near", &p.near, 0.001, 1, "%.3f")
                 ImGui.InputFloat("far", &p.far, 1, 100000, "%.3f")
                 self.orthographicParams = p
